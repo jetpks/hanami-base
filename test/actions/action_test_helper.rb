@@ -6,8 +6,11 @@ require "json"
 require "omniauth"
 
 # Test helper uses hanami/prepare (not hanami/boot), so providers don't auto-start.
-# Start :inertia so shared_props (flash, current_user) are configured before tests.
+# Start :inertia so shared_props (flash, current_user) are configured before tests,
+# and :redis so the SSE transport's Deps["redis"] clients hit the suite's flushed
+# database from the first request.
 Space::Server::App.start(:inertia)
+Space::Server::App.start(:redis)
 
 module ActionTestHelper
   def app = Space::Server::App

@@ -8,12 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { csrfToken } from '@/lib/csrf'
 import type { SharedProps } from '@/types'
-
-function csrfToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : ''
-}
 
 export default function Nav() {
   const { current_user } = usePage<SharedProps>().props
@@ -26,6 +22,12 @@ export default function Nav() {
         </Link>
 
         <nav className="flex items-center gap-3">
+          <Link
+            href="/ticker"
+            className="text-sm text-sidebar-foreground/70 transition-colors hover:text-sidebar-foreground"
+          >
+            Ticker
+          </Link>
           {current_user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
