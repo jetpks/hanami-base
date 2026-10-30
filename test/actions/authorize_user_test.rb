@@ -27,7 +27,7 @@ class AuthorizeUserTest < Minitest::Test
     post("/auth/github/callback")
   end
 
-  def seam = Space::Server::App["operations.authorize_user"]
+  def seam = Template::App["operations.authorize_user"]
 
   # Container resolutions are fresh instances, so the deny rule is injected at
   # the class: every resolution constructs the denying seam for the block's
@@ -35,7 +35,7 @@ class AuthorizeUserTest < Minitest::Test
   def with_denying_seam
     deny_seam = Object.new
     def deny_seam.call(_user, _auth_hash) = false
-    Space::Server::Operations::AuthorizeUser.stub(:new, ->(*) { deny_seam }) do
+    Template::Operations::AuthorizeUser.stub(:new, ->(*) { deny_seam }) do
       yield
     end
   end
@@ -49,7 +49,7 @@ class AuthorizeUserTest < Minitest::Test
     assert_equal 302, status
     assert_equal "/", headers["location"]
 
-    user = Space::Server::App["repos.users_repo"].by_github_uid("9")
+    user = Template::App["repos.users_repo"].by_github_uid("9")
     refute_nil user, "allowed sign-in must persist the user"
 
     @session_cookie = headers["set-cookie"]&.split(";")&.first

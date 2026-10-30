@@ -5,7 +5,7 @@ require_relative "../test_helper"
 # G2: CRUD round-trips and finders on the surviving repo.
 class ReposTest < Minitest::Test
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def setup
@@ -14,7 +14,7 @@ class ReposTest < Minitest::Test
     conn[:users].delete
   end
 
-  def users_repo = Space::Server::Repos::UsersRepo.new
+  def users_repo = Template::Repos::UsersRepo.new
 
   def make_user(overrides = {})
     Factory[:user, **overrides]

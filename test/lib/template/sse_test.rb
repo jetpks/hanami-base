@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "../../../test_helper"
+require_relative "../../test_helper"
 # The acronym constant can't ride the app autoloader (see the require note in
-# lib/space/server/sse.rb) — required by path like every other consumer.
-require_relative "../../../../lib/space/server/sse"
+# lib/template/sse.rb) — required by path like every other consumer.
+require_relative "../../../lib/template/sse"
 
 class SseTest < Minitest::Test
-  SSE = Space::Server::SSE
+  SSE = Template::SSE
 
   # --- entry_bound -------------------------------------------------------------------
 

@@ -1,11 +1,9 @@
 # frozen_string_literal: true
 
-module Space
-  module Server
-    module Relations
-      class Documents < Space::Server::DB::Relation
-        schema(:documents, infer: true)
-      end
+module Template
+  module Relations
+    class Documents < Template::DB::Relation
+      schema(:documents, infer: true)
     end
   end
 end

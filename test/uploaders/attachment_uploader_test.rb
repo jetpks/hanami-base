@@ -4,7 +4,7 @@ require_relative "../test_helper"
 
 class AttachmentUploaderTest < Minitest::Test
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def setup
@@ -13,11 +13,11 @@ class AttachmentUploaderTest < Minitest::Test
     conn[:documents].delete
   end
 
-  def documents_repo = Space::Server::Repos::DocumentsRepo.new
+  def documents_repo = Template::Repos::DocumentsRepo.new
 
   # Storages are configured at uploader load (not via a provider); test env = Memory
   def test_storages_configured_as_memory_in_test
-    storages = Space::Server::AttachmentUploader.storages
+    storages = Template::AttachmentUploader.storages
     assert storages.key?(:cache), "storages missing :cache"
     assert storages.key?(:store), "storages missing :store"
     assert_equal "Shrine::Storage::Memory", storages[:cache].class.name
@@ -27,7 +27,7 @@ class AttachmentUploaderTest < Minitest::Test
   # Round-trip: store → persist → reload struct → #attachment → open
   def test_round_trip_store_persist_reload_read
     content = "hello attachment\nline two\n"
-    data = Space::Server::AttachmentUploader.store(StringIO.new(content))
+    data = Template::AttachmentUploader.store(StringIO.new(content))
 
     assert_kind_of String, data
     parsed = JSON.parse(data)
@@ -39,7 +39,7 @@ class AttachmentUploaderTest < Minitest::Test
 
     attachment = reloaded.attachment
     refute_nil attachment
-    assert_instance_of Space::Server::AttachmentUploader::UploadedFile, attachment
+    assert_instance_of Template::AttachmentUploader::UploadedFile, attachment
 
     read_bytes = attachment.open { |io| io.read }
     assert_equal content, read_bytes

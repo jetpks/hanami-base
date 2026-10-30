@@ -11,11 +11,11 @@ require "omniauth"
 # Start :inertia so shared_props (flash, current_user) are configured before tests,
 # and :redis so the SSE transport's Deps["redis"] clients hit the suite's flushed
 # database from the first request.
-Space::Server::App.start(:inertia)
-Space::Server::App.start(:redis)
+Template::App.start(:inertia)
+Template::App.start(:redis)
 
 module ActionTestHelper
-  def app = Space::Server::App
+  def app = Template::App
 
   def get(path, params: {})
     query = params.empty? ? "" : URI.encode_www_form(params)
@@ -30,7 +30,7 @@ module ActionTestHelper
   # Accepts an optional cookie: override so flash round-trips can supply the
   # redirect's set-cookie rather than @session_cookie.
   def inertia_get(path, params: {}, cookie: nil)
-    vite_version = Space::Server::App["vite"].digest
+    vite_version = Template::App["vite"].digest
     query = params.empty? ? "" : URI.encode_www_form(params)
     path_with_query = params.empty? ? path : "#{path}?#{query}"
     env = Rack::MockRequest.env_for(path_with_query, "REQUEST_METHOD" => "GET")
@@ -75,7 +75,7 @@ module ActionTestHelper
       input: body
     )
     env["HTTP_X_INERTIA"] = "true"
-    env["HTTP_X_INERTIA_VERSION"] = Space::Server::App["vite"].digest
+    env["HTTP_X_INERTIA_VERSION"] = Template::App["vite"].digest
     env["HTTP_COOKIE"] = @session_cookie if @session_cookie
     app.call(env)
   end
@@ -124,7 +124,7 @@ module ActionTestHelper
   def inertia_delete(path)
     env = Rack::MockRequest.env_for(path, "REQUEST_METHOD" => "DELETE")
     env["HTTP_X_INERTIA"] = "true"
-    env["HTTP_X_INERTIA_VERSION"] = Space::Server::App["vite"].digest
+    env["HTTP_X_INERTIA_VERSION"] = Template::App["vite"].digest
     env["HTTP_COOKIE"] = @session_cookie if @session_cookie
     app.call(env)
   end
@@ -135,7 +135,7 @@ module ActionTestHelper
   end
 
   def setup_db
-    conn = Space::Server::App["db.gateway"].connection
+    conn = Template::App["db.gateway"].connection
     Faker::Internet.unique.clear
     Faker::Number.unique.clear
     [:users].each { |t| conn[t].delete }

@@ -4,6 +4,6 @@ require_relative "test_helper"
 
 class AppTest < Minitest::Test
   def test_boots_successfully
-    assert_kind_of Class, Space::Server::App
+    assert_kind_of Class, Template::App
   end
 end

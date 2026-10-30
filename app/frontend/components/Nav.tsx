@@ -18,7 +18,7 @@ export default function Nav() {
     <header className="border-b-2 border-primary bg-sidebar text-sidebar-foreground">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
         <Link href="/" className="font-mono text-lg font-bold tracking-tight text-primary">
-          Hanami Base
+          Template
         </Link>
 
         <nav className="flex items-center gap-3">

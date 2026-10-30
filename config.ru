@@ -5,7 +5,7 @@ require "hanami/boot"
 # Transport security wired at the rackup layer rather than config/app.rb because
 # Hanami 2.3 config.middleware.use appends after framework middleware (slice.rb:1088),
 # so Rack::Session::Cookie would precede these. config.ru wrapping is truly outermost.
-_settings = Space::Server::App["settings"]
+_settings = Template::App["settings"]
 
 use HanamiForceSSL::Middleware,
   redirect:   _settings.force_ssl ? { exclude: ->(req) { req.path == "/up" } } : false,

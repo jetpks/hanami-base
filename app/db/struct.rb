@@ -2,11 +2,9 @@
 
 require "hanami/db/struct"
 
-module Space
-  module Server
-    module DB
-      class Struct < Hanami::DB::Struct
-      end
+module Template
+  module DB
+    class Struct < Hanami::DB::Struct
     end
   end
 end

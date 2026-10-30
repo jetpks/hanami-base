@@ -15,7 +15,7 @@
 require "hanami/boot"
 require "async"
 
-server = Space::Server::Jobs::ProcessDocument.build_redis_processor
+server = Template::Jobs::ProcessDocument.build_redis_processor
 
 Console.logger.info(self, "Job worker starting (prefix=jobs)")
 Console.logger.info(self, "Stop with Ctrl-C — dev-only worker; no managed topology in this template")

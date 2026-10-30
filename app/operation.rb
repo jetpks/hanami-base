@@ -3,9 +3,7 @@
 
 require "dry/operation"
 
-module Space
-  module Server
-    class Operation < Dry::Operation
-    end
+module Template
+  class Operation < Dry::Operation
   end
 end

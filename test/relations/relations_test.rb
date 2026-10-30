@@ -5,11 +5,11 @@ require_relative "../test_helper"
 # Relations load with schema inferred from the distilled users table.
 class RelationsTest < Minitest::Test
   def rom
-    @rom ||= Space::Server::App["db.rom"]
+    @rom ||= Template::App["db.rom"]
   end
 
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def setup

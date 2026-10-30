@@ -4,7 +4,7 @@ require_relative "action_test_helper"
 require "async"
 require "async/redis"
 require "async/redis/endpoint"
-require_relative "../../lib/space/server/sse"
+require_relative "../../lib/template/sse"
 
 class TickerStreamTest < Minitest::Test
   include ActionTestHelper
@@ -12,7 +12,7 @@ class TickerStreamTest < Minitest::Test
   STREAM_KEY = "sse:ticker"
 
   def teardown
-    Space::Server::SSE::Fanout.stop(STREAM_KEY)
+    Template::SSE::Fanout.stop(STREAM_KEY)
   end
 
   def redis_endpoint
@@ -114,7 +114,7 @@ class TickerStreamTest < Minitest::Test
   def test_ticker_heartbeat_pings_after_the_backlog
     # Heartbeat constant swapped short — the action reads it at queue-pop time,
     # so the production 15s posture is unchanged while the test cycles fast.
-    fanout_class = Space::Server::SSE::Fanout
+    fanout_class = Template::SSE::Fanout
     original     = fanout_class::HEARTBEAT_SECONDS
     fanout_class.send(:remove_const, :HEARTBEAT_SECONDS)
     fanout_class.const_set(:HEARTBEAT_SECONDS, 0.1)
