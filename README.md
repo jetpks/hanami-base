@@ -20,6 +20,12 @@ and transport every project wants and no domain.
   over redis streams (`Space::Server::SSE` + `SSE::Fanout` in
   `lib/space/server/`), proven end-to-end by the public ticker example
   (`GET /ticker` live feed + `POST /ticker/publish`, `Ticker/Index` page).
+- Attachments: a Shrine uploader skeleton (`Space::Server::AttachmentUploader`)
+  with memory storages in test / file-system otherwise, the uploader JSON in a
+  text column, and `uploaded_file` reconstitution from the struct.
+- Background jobs: async-job with the Inline processor in test / a redis
+  processor otherwise, plus the `bin/worker` dev worker — enqueued and processed
+  through one shared construction.
 - Five in-tree gems under `gems/` (frozen substrate): hanami-credentials,
   hanami-force-ssl, hanami-healthcheck, inertia-hanami, vite-hanami.
 - mise ruby pin, healthcheck (`GET /up`), force-ssl, encrypted credentials.
@@ -71,6 +77,38 @@ localhost db 0); the test suite boots against an isolated non-zero database and
 flushes it — `test/test_helper.rb` raises otherwise, so a misconfigured suite
 fails loudly instead of wiping dev.
 
+## Attachments and background jobs
+
+Uploads go through `Space::Server::AttachmentUploader`
+(`app/attachment_uploader.rb`): `AttachmentUploader.store(io)` uploads to the
+`store` storage and returns the JSON string a text column carries
+(`{id, storage, metadata}`); the struct's `#attachment` reconstitutes it into
+an `UploadedFile` (`.open { |io| ... }`, `.each_line`, `.metadata`) and is nil
+when the column is empty. Storages are configured at class load — in-memory in
+test (nothing on disk, nothing to clean up), `storage/{cache,store}` under the
+app root in dev/prod (git-ignored).
+
+Background work is enqueued through the `job_queue` dep
+(`config/providers/job_queue.rb`): under test it is
+`Async::Job::Processor::Inline` and the job body runs in-request; otherwise it
+is a redis-backed processor and a worker process dequeues:
+
+```sh
+REDIS_URL=redis://localhost:6379 mise exec -- bundle exec ruby bin/worker.rb
+```
+
+The worker and the tests share one construction —
+`Jobs::ProcessDocument.build_redis_processor(prefix:)` — so the queue a test
+round-trips against is exactly the one the worker runs; tests pass a unique
+prefix per run so they never touch a live worker's keys.
+
+The `documents` table is the copy-me example: `POST /documents`
+(`Actions::Documents::Create`) stores the upload, persists the JSON, and
+enqueues `{"document_id" => id}`; `Jobs::ProcessDocument`
+(`app/jobs/process_document.rb`) opens the attachment, records its byte size
+and `processed_at`, and returns early (warn, never raise) when the row or its
+attachment is gone.
+
 ## Mint a project
 
 Clone this repo and develop — it boots as-is. (A rename/mint pass for the
@@ -94,6 +132,13 @@ bin/credentials edit   # opens $EDITOR; set github_client_id/secret and db url
 
 ```sh
 bin/dev   # starts web server (:3000) and Vite (:3036)
+```
+
+The background-jobs worker is a separate dev-only process (see
+[Attachments and background jobs](#attachments-and-background-jobs)):
+
+```sh
+REDIS_URL=redis://localhost:6379 mise exec -- bundle exec ruby bin/worker.rb
 ```
 
 ## Test

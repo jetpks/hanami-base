@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Attachments + background-jobs substrate: the Shrine uploader skeleton
+  (`Space::Server::AttachmentUploader` — memory storages in test, file-system
+  otherwise, uploader JSON in a text column with `uploaded_file`
+  reconstitution from the struct) and the async-job queue (Inline processor in
+  test, redis processor + `bin/worker` otherwise, one shared
+  `build_redis_processor` construction), proven end-to-end by the documents
+  example (`POST /documents` → `Space::Server::Jobs::ProcessDocument` records
+  the attachment's byte size).
 - SSE transport substrate: `Space::Server::StreamAction` (the three SSE
   headers, streaming proc body, subscribe-then-backlog race discipline with
   numeric entry-id dedup, heartbeat-on-pop-timeout, Last-Event-ID resume) over

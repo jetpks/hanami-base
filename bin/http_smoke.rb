@@ -36,6 +36,7 @@ ANON_ROUTES = [
   ["DELETE", "/logout"],
   ["GET",    "/"],
   ["GET",    "/ticker"],
+  ["POST",   "/documents"],
 ].freeze
 
 ANON_ROUTES.each do |verb, path|
