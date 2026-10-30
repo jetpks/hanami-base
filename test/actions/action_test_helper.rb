@@ -7,9 +7,7 @@ require "omniauth"
 
 # Test helper uses hanami/prepare (not hanami/boot), so providers don't auto-start.
 # Start :inertia so shared_props (flash, current_user) are configured before tests.
-# Start :redis so the ingest action can access the Redis client.
 Space::Server::App.start(:inertia)
-Space::Server::App.start(:redis)
 
 module ActionTestHelper
   def app = Space::Server::App
@@ -38,7 +36,7 @@ module ActionTestHelper
     app.call(env)
   end
 
-  def post(path, params: {}, bearer: nil)
+  def post(path, params: {})
     body = URI.encode_www_form(flatten_params(params))
     env = Rack::MockRequest.env_for(
       path,
@@ -47,7 +45,6 @@ module ActionTestHelper
       input: body
     )
     env["HTTP_COOKIE"] = @session_cookie if @session_cookie
-    env["HTTP_AUTHORIZATION"] = "Bearer #{bearer}" unless bearer.nil?
     app.call(env)
   end
 
@@ -78,7 +75,7 @@ module ActionTestHelper
     app.call(env)
   end
 
-  def post_raw(path, body:, content_type: "application/x-ndjson", bearer: nil)
+  def post_raw(path, body:, content_type: "application/x-ndjson")
     env = Rack::MockRequest.env_for(
       path,
       "REQUEST_METHOD" => "POST",
@@ -87,7 +84,6 @@ module ActionTestHelper
       input: body
     )
     env["HTTP_COOKIE"] = @session_cookie if @session_cookie
-    env["HTTP_AUTHORIZATION"] = "Bearer #{bearer}" unless bearer.nil?
     app.call(env)
   end
 
@@ -115,7 +111,7 @@ module ActionTestHelper
     conn = Space::Server::App["db.gateway"].connection
     Faker::Internet.unique.clear
     Faker::Number.unique.clear
-    [:artifacts, :iterations, :messages, :conversations, :spaces, :users].each { |t| conn[t].delete }
+    [:users].each { |t| conn[t].delete }
   end
 
   # Establish a signed-in session via the real OmniAuth callback stack.

@@ -55,7 +55,6 @@ Async do |task|
               conn[:users].insert(
                 github_uid:  "#{uid}_discarded",
                 username:    "smoke_#{i}_discarded",
-                github_orgs: Sequel.pg_jsonb([]),
                 created_at:  Time.now,
                 updated_at:  Time.now
               )
@@ -71,7 +70,6 @@ Async do |task|
           conn[:users].insert(
             github_uid:  uid,
             username:    name,
-            github_orgs: Sequel.pg_jsonb([]),
             created_at:  Time.now,
             updated_at:  Time.now
           )

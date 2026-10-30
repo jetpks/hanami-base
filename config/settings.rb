@@ -8,6 +8,17 @@ module Space
       setting :github_client_id, default: nil
       setting :github_client_secret, default: nil
 
+      # Enabled OAuth providers (BRIEF §4) — names resolved against the
+      # provider→strategy map in config/app.rb. github is the compiled-in
+      # example; accepts a comma-separated string for ENV overrides.
+      setting :oauth_providers, default: ["github"], constructor: ->(v) {
+        case v
+        when Array  then v
+        when String then v.split(",").map(&:strip).reject(&:empty?)
+        else []
+        end
+      }
+
       # Transport security — production values via ENV/credentials (S2 deploy slice).
       # Defaults are dev/test-safe: no redirect lockout, all hosts permitted.
       setting :force_ssl,        default: false, constructor: Types::Params::Bool

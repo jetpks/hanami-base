@@ -61,7 +61,7 @@ class InertiaChassisLayoutTest < Minitest::Test
   def test_title_has_data_inertia_attribute
     html = render_layout
     assert_includes html, "<title data-inertia>"
-    assert_includes html, "Chat Share"
+    assert_includes html, "Hanami Base"
     refute_includes html, "content_for"
   end
 

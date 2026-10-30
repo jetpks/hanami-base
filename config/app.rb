@@ -18,6 +18,44 @@ module Space
     # so the window slides with use.
     SESSION_EXPIRE_AFTER = 2_592_000
 
+    # Mountable OAuth providers (BRIEF §4). The enabled list comes from
+    # settings (`oauth_providers`, default ["github"] — the compiled-in example
+    # strategy, `require "omniauth-github"` in config/app.rb). Each entry maps
+    # a provider name to its OmniAuth registration (strategy + which settings
+    # carry the client credentials + strategy options) and the CSP form-action
+    # origin its sign-in redirect needs. Adding a provider = strategy gem +
+    # entry here + settings flip; nothing else in the app knows provider names.
+    OAUTH_PROVIDERS = {
+      "github" => {
+        strategy:              :github,
+        client_id_setting:     :github_client_id,
+        client_secret_setting: :github_client_secret,
+        strategy_options:      {scope: "read:user,user:email,read:org"},
+        form_action_origin:    "https://github.com"
+      }
+    }.freeze
+
+    # The OmniAuth registration args for an enabled provider name. fetch — not
+    # [] — so a name missing from the map (settings typo, strategy gem not
+    # added yet) raises at boot instead of silently disabling sign-in.
+    def self.oauth_provider_registration(name, settings)
+      entry = OAUTH_PROVIDERS.fetch(name)
+      [
+        entry[:strategy],
+        settings.public_send(entry[:client_id_setting]),
+        settings.public_send(entry[:client_secret_setting]),
+        entry[:strategy_options]
+      ]
+    end
+
+    # CSP form-action origins for the enabled providers: the OmniAuth request
+    # phase 302-redirects the sign-in POST to the provider origin, and
+    # form-action is enforced across the whole redirect chain — so every
+    # enabled origin must be allow-listed (see the App class below).
+    def self.oauth_form_action_origins(enabled)
+      enabled.map { |name| OAUTH_PROVIDERS.fetch(name)[:form_action_origin] }
+    end
+
     class App < Hanami::App
       config.settings_store = HanamiCredentials::Store.new(
         content_path: Pathname(__dir__).join("credentials.yml.enc"),
@@ -45,26 +83,6 @@ module Space
         end
       end
 
-      # Guards the raw-body ingest route against the router/body-parser stack
-      # touching rack.input before the ingest actions read it. hanami-router
-      # 3.0.0's _form_urlencoded_body (lib/hanami/router.rb:1061) and
-      # Middleware::BodyParser#call (lib/hanami/middleware/body_parser.rb:37)
-      # both short-circuit when ROUTER_PARSED_BODY is present — so setting it
-      # here keeps the ingest stream untouched for incremental reads/streaming,
-      # by construction rather than by content-type.
-      IngestBodyPassthrough = Class.new do
-        RAW_BODY_ROUTES = %r{\A/conversations/ingest\z}
-
-        def initialize(app) = @app = app
-
-        def call(env)
-          if env["REQUEST_METHOD"] == "POST" && RAW_BODY_ROUTES.match?(env["PATH_INFO"])
-            env[Hanami::Router::ROUTER_PARSED_BODY] ||= {}
-          end
-          @app.call(env)
-        end
-      end
-
       config.actions.sessions = :cookie, {
         key: "_space_server_session",
         secret: settings.session_secret,
@@ -80,10 +98,17 @@ module Space
       # csrf_protection defaults to true when sessions are enabled;
       # hanami-action auto-disables it in HANAMI_ENV=test
 
-      # OmniAuth GitHub OAuth — on_failure routes to our failure action via redirect.
-      # Captured here so the block below closes over resolved values (not the lazy setting).
-      _github_id     = settings.github_client_id
-      _github_secret = settings.github_client_secret
+      # OmniAuth OAuth — on_failure routes to our failure action via redirect.
+      # The mount below is settings-driven: settings.oauth_providers names the
+      # enabled providers (default ["github"], BRIEF §4) and OAUTH_PROVIDERS
+      # maps each name to its strategy + client-credential settings. Resolved
+      # into locals here so the Builder block — instance_eval'd later, at
+      # rack-app build time, when `settings` is out of scope — closes over
+      # values, not the lazy settings method (same discipline the seed used
+      # for its captured client id/secret).
+      _oauth_registrations = settings.oauth_providers.map do |name|
+        Space::Server.oauth_provider_registration(name, settings)
+      end
 
       OmniAuth.config.on_failure = proc do |env|
         msg = Rack::Utils.escape(env["omniauth.error.type"]&.to_s || "unknown")
@@ -107,19 +132,23 @@ module Space
       end
 
       config.middleware.use OmniAuth::Builder do
-        provider :github, _github_id, _github_secret,
-          scope: "read:user,user:email,read:org"
+        _oauth_registrations.each do |provider_args|
+          provider(*provider_args)
+        end
       end
 
-      # OmniAuth's request phase 302-redirects the sign-in POST to github.com, and the
-      # CSP `form-action` directive is enforced across the whole redirect chain — so the
-      # provider origin must be allow-listed (every env; the redirect happens in prod too).
-      # Chrome reports the violation against the pre-redirect /auth/github URL, which is
-      # why it misreads as a 'self' block.
-      config.actions.content_security_policy[:form_action] += " https://github.com"
+      # OmniAuth's request phase 302-redirects the sign-in POST to the provider
+      # origin, and the CSP `form-action` directive is enforced across the whole
+      # redirect chain — so every enabled provider's origin must be allow-listed
+      # (every env; the redirect happens in prod too). Derived from the same
+      # settings-driven list as the mount above. Chrome reports the violation
+      # against the pre-redirect /auth/github URL, which is why it misreads as a
+      # 'self' block.
+      Space::Server.oauth_form_action_origins(settings.oauth_providers).each do |origin|
+        config.actions.content_security_policy[:form_action] += " #{origin}"
+      end
 
       config.middleware.use HostRedirect
-      config.middleware.use IngestBodyPassthrough
 
       # JSON request bodies. Hanami 3 ships NO implicit body parser — the
       # app config has no use_body_parser_middleware auto-append anymore, so
@@ -127,13 +156,7 @@ module Space
       # resolves at use-time to Hanami::Middleware::BodyParser (shipped by
       # hanami-router, lib/hanami/middleware/body_parser.rb; the middleware
       # stack's load_middleware_class requires it and classifies the symbol).
-      # Registered explicitly so the JSON contract is legible here, and so its
-      # position relative to IngestBodyPassthrough is pinned rather than
-      # incidental. Placed AFTER IngestBodyPassthrough: that middleware pre-sets
-      # ROUTER_PARSED_BODY ("router.parsed_body") for /conversations/ingest, and
-      # BodyParser's own `call` short-circuits whenever that key is already
-      # present (hanami-router 3.0.0 body_parser.rb:37) — so the ingest stream is
-      # skipped by construction, not by content-type (application/x-ndjson) alone.
+      # Registered explicitly so the JSON contract is legible here.
       config.middleware.use :body_parser, :json
 
       # Dev-only: the Vite dev server (port 3036) serves ES modules cross-origin and injects an
