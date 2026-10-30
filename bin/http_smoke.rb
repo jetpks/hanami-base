@@ -25,7 +25,8 @@ end
 
 failures = []
 
-# Routes that must NOT 5xx
+# Routes that must NOT 5xx. /ticker is the SSE endpoint: only its status/headers
+# are proven here — the proc body is never driven by the smoke.
 ANON_ROUTES = [
   ["GET",    "/up"],
   ["GET",    "/auth/github/callback"],
@@ -34,6 +35,7 @@ ANON_ROUTES = [
   ["GET",    "/logout"],
   ["DELETE", "/logout"],
   ["GET",    "/"],
+  ["GET",    "/ticker"],
 ].freeze
 
 ANON_ROUTES.each do |verb, path|

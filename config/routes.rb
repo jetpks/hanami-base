@@ -14,6 +14,10 @@ module Space
       get    "/logout", to: "sessions.destroy"
       delete "/logout", to: "sessions.destroy"
 
+      # The SSE transport's neutral example: a public live feed + its publisher
+      get  "/ticker",          to: "ticker.index"
+      post "/ticker/publish", to: "ticker.publish"
+
       # The template's one example page
       root to: "home.index"
     end

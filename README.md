@@ -15,6 +15,11 @@ and transport every project wants and no domain.
   primitives, layout/nav scaffold, and one example page (`Home/Index` at `/`)
   exercising the whole chain — inertia shared props, the vite pipeline, and a
   `components/ui` primitive.
+- SSE transport substrate: `Space::Server::StreamAction` (streaming body,
+  heartbeat, Last-Event-ID resume, subscribe-then-backlog race discipline)
+  over redis streams (`Space::Server::SSE` + `SSE::Fanout` in
+  `lib/space/server/`), proven end-to-end by the public ticker example
+  (`GET /ticker` live feed + `POST /ticker/publish`, `Ticker/Index` page).
 - Five in-tree gems under `gems/` (frozen substrate): hanami-credentials,
   hanami-force-ssl, hanami-healthcheck, inertia-hanami, vite-hanami.
 - mise ruby pin, healthcheck (`GET /up`), force-ssl, encrypted credentials.
@@ -39,6 +44,32 @@ allows any authenticated identity — the template must round-trip auth out of
 the box. A project overrides `#call(user, auth_hash)` (the OmniAuth auth hash
 carries the provider's own claims: orgs, teams, email domain) to plug its own
 rule; a `false` outcome redirects to `/` with an alert flash and no session.
+
+## The SSE transport
+
+Actions that stream live events subclass `Space::Server::StreamAction`
+(`app/stream_action.rb`) and call `render_stream(req, res, key:)` with a redis
+stream key. The response carries the three SSE headers, replays the stream's
+backlog (a reconnecting client's `Last-Event-ID` becomes the exclusive start
+bound), then live-tails the key with a 15s heartbeat comment until the client
+disconnects. Entries are redis stream `[entry_id, fields]` pairs framed as
+`id:`/`data:` lines; the numeric entry-id cursor deduplicates the race window
+between subscribing and reading the backlog (`lib/space/server/sse.rb`).
+
+The transport carries no auth machinery by design — gating is the subclass's
+job: override `handle`, do the check FIRST, and only then call `render_stream`
+(halting before it keeps the error response ordinary JSON; once the SSE headers
+are set, an error can only surface as a broken stream).
+
+The ticker example is the whole chain in miniature: `GET /ticker` (the
+`Ticker/Index` page's `EventSource`) tails the `sse:ticker` stream, and
+`POST /ticker/publish` (the page's fetch POST carrying `X-XSRF-TOKEN`) INCRs a
+counter and XADDs one capped entry.
+
+Redis is required for the transport. Dev reads `REDIS_URL` (falling back to
+localhost db 0); the test suite boots against an isolated non-zero database and
+flushes it — `test/test_helper.rb` raises otherwise, so a misconfigured suite
+fails loudly instead of wiping dev.
 
 ## Mint a project
 
@@ -68,7 +99,7 @@ bin/dev   # starts web server (:3000) and Vite (:3036)
 ## Test
 
 ```sh
-bundle exec rake test  # Ruby suite (needs local postgres; mise exec -- wraps ruby)
+bundle exec rake test  # Ruby suite (needs local postgres + redis; mise exec -- wraps ruby)
 npm test               # Vitest (TypeScript/component tests)
 npm run check          # TypeScript type check
 ```

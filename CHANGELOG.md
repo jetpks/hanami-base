@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- SSE transport substrate: `Space::Server::StreamAction` (the three SSE
+  headers, streaming proc body, subscribe-then-backlog race discipline with
+  numeric entry-id dedup, heartbeat-on-pop-timeout, Last-Event-ID resume) over
+  redis streams via `Space::Server::SSE` + `SSE::Fanout` (`lib/space/server/`),
+  with the public ticker example (`GET /ticker` live feed +
+  `POST /ticker/publish`, `Ticker/Index` page) and the restored redis test
+  posture (suite-boot guard + FLUSHDB, CI `redis:7` service).
+
 ## [0.1.0] - 2026-10-30
 
 ### Added
