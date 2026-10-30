@@ -18,6 +18,9 @@ module Space
       get  "/ticker",          to: "ticker.index"
       post "/ticker/publish", to: "ticker.publish"
 
+      # The attachments example: upload → persist → enqueue for processing
+      post "/documents", to: "documents.create"
+
       # The template's one example page
       root to: "home.index"
     end

@@ -27,6 +27,13 @@ gem "falcon", "0.57.0"
 # Redis (display streams for the runs chain; sole consumer: config/providers/redis.rb)
 gem "async-redis", "0.14.0"
 
+# Background jobs (web side enqueues, worker process dequeues)
+gem "async-job", "0.11.1"
+gem "async-job-processor-redis", "0.3.1"
+
+# File attachments
+gem "shrine", "3.7.1"
+
 # Persistence
 gem "rom", "5.4.3"
 gem "rom-sql", "3.7.0"

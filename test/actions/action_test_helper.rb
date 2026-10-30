@@ -2,6 +2,8 @@
 
 require_relative "../test_helper"
 require "rack/mock"
+require "rack/multipart"
+require "stringio"
 require "json"
 require "omniauth"
 
@@ -83,6 +85,28 @@ module ActionTestHelper
       path,
       "REQUEST_METHOD" => "POST",
       "CONTENT_TYPE" => content_type,
+      "CONTENT_LENGTH" => body.bytesize.to_s,
+      input: body
+    )
+    env["HTTP_COOKIE"] = @session_cookie if @session_cookie
+    app.call(env)
+  end
+
+  # POST one file part as multipart/form-data. Rack::Multipart.build_multipart
+  # returns the BODY ONLY with a FIXED boundary, so the content-type (and the
+  # length it implies) must be set by hand — the request then parses `file` into
+  # the symbol-keyed Hash the upload actions guard on ({filename:, type:, name:,
+  # tempfile:, head:}).
+  def post_multipart(path, file:)
+    uploaded = Rack::Multipart::UploadedFile.new(
+      nil, file.fetch(:content_type, "text/plain"), false,
+      filename: file[:filename], io: StringIO.new(file[:content])
+    )
+    body = Rack::Multipart.build_multipart({"file" => uploaded})
+    env = Rack::MockRequest.env_for(
+      path,
+      "REQUEST_METHOD" => "POST",
+      "CONTENT_TYPE" => "multipart/form-data; boundary=#{Rack::Multipart::MULTIPART_BOUNDARY}",
       "CONTENT_LENGTH" => body.bytesize.to_s,
       input: body
     )

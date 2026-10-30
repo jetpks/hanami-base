@@ -16,3 +16,13 @@ Factory.define(:user) do |f|
   f.created_at    { Time.now }
   f.updated_at    { Time.now }
 end
+
+# The attachments example row: unattached and unprocessed by default; the
+# uploader's JSON string rides the attachment_data text column.
+Factory.define(:document) do |f|
+  f.attachment_data { nil }
+  f.byte_count      { nil }
+  f.processed_at    { nil }
+  f.created_at      { Time.now }
+  f.updated_at      { Time.now }
+end
