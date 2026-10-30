@@ -13,9 +13,9 @@ require "securerandom"
 # suite-boot guard already hard-requires redis, so an unreachable server must
 # fail loudly instead of faking the proof.
 class JobQueueRedisIntegrationTest < Minitest::Test
-  def conn = @conn ||= Space::Server::App["db.gateway"].connection
+  def conn = @conn ||= Template::App["db.gateway"].connection
 
-  def documents_repo = Space::Server::Repos::DocumentsRepo.new
+  def documents_repo = Template::Repos::DocumentsRepo.new
 
   def setup
     Faker::Internet.unique.clear
@@ -25,7 +25,7 @@ class JobQueueRedisIntegrationTest < Minitest::Test
 
   def test_redis_round_trip_processes_document
     content = "round trip\nsecond line\n"
-    data = Space::Server::AttachmentUploader.store(StringIO.new(content))
+    data = Template::AttachmentUploader.store(StringIO.new(content))
     document = Factory[:document, attachment_data: data]
 
     # Unique prefix per run: never collides with a live worker's queue keys
@@ -37,7 +37,7 @@ class JobQueueRedisIntegrationTest < Minitest::Test
       # inside server_task below, ALL server sub-tasks (dequeue loop,
       # delayed-jobs bg, processing-list bg) become children of server_task's
       # inner fiber.
-      server = Space::Server::Jobs::ProcessDocument.build_redis_processor(prefix: prefix)
+      server = Template::Jobs::ProcessDocument.build_redis_processor(prefix: prefix)
 
       # Enqueue before starting the server (a pure redis write — no tasks needed)
       server.call({"document_id" => document.id})

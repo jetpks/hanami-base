@@ -6,7 +6,7 @@ require_relative "../test_helper"
 # the Inline processor, and a call runs the job body in-request.
 class ProcessDocumentTest < Minitest::Test
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def setup
@@ -15,14 +15,14 @@ class ProcessDocumentTest < Minitest::Test
     conn[:documents].delete
   end
 
-  def documents_repo = Space::Server::Repos::DocumentsRepo.new
+  def documents_repo = Template::Repos::DocumentsRepo.new
 
   def test_provider_resolves_inline_and_runs_the_job_body
-    queue = Space::Server::App["job_queue"]
+    queue = Template::App["job_queue"]
     assert_instance_of Async::Job::Processor::Inline, queue
 
     content = "count my bytes\n"
-    data = Space::Server::AttachmentUploader.store(StringIO.new(content))
+    data = Template::AttachmentUploader.store(StringIO.new(content))
     document = Factory[:document, attachment_data: data]
 
     # Inline schedules through Async::Idler, so the call needs a reactor
@@ -37,14 +37,14 @@ class ProcessDocumentTest < Minitest::Test
 
   # Unknown id: warn and return — nothing written, nothing raised
   def test_unknown_id_warns_and_returns
-    Space::Server::Jobs::ProcessDocument.new.call(999_999_999)
+    Template::Jobs::ProcessDocument.new.call(999_999_999)
     assert_equal 0, conn[:documents].count
   end
 
   # Attachmentless row: warn and return — the row stays unprocessed
   def test_document_without_attachment_warns_and_returns
     document = Factory[:document]
-    Space::Server::Jobs::ProcessDocument.new.call(document.id)
+    Template::Jobs::ProcessDocument.new.call(document.id)
 
     reloaded = documents_repo.by_pk(document.id)
     assert_nil reloaded.processed_at

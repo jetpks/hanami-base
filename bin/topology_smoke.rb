@@ -6,14 +6,14 @@
 # Launches `falcon host falcon.rb`, confirms the web service is up (/answers /up),
 # sends SIGTERM, confirms graceful exit and no orphaned child processes.
 #
-# Usage: cd architect && HANAMI_ENV=development bundle exec ruby bin/topology_smoke.rb
+# Usage: cd <app root> && HANAMI_ENV=development bundle exec ruby bin/topology_smoke.rb
 # Exit 0 = PASS; exit 1 = FAIL (details on stderr)
 
 require "timeout"
 require "net/http"
 require "uri"
 
-ARCHITECT_DIR = File.expand_path("..", __dir__)
+APP_DIR = File.expand_path("..", __dir__)
 WEB_PORT    = 3000
 WEB_URL     = "http://localhost:#{WEB_PORT}/up"
 BOOT_WAIT   = 45  # seconds for falcon host + child processes to boot
@@ -30,10 +30,10 @@ def log(msg)
 end
 
 ENV["HANAMI_ENV"] ||= "development"
-Dir.chdir(ARCHITECT_DIR)
+Dir.chdir(APP_DIR)
 
 # ---------------------------------------------------------------------------
-# Launch `falcon host falcon.rb` as a child process (from architect/ dir).
+# Launch `falcon host falcon.rb` as a child process (from the app root).
 # ---------------------------------------------------------------------------
 falcon_bin = `which falcon`.strip
 fail! "falcon not found on PATH" if falcon_bin.empty?
@@ -45,7 +45,7 @@ log "Spawning: #{falcon_bin} host falcon.rb (log: #{FALCON_LOG})"
 falcon_pid = Process.spawn(
   { "HANAMI_ENV" => "development" },
   falcon_bin, "host", "falcon.rb",
-  chdir: ARCHITECT_DIR,
+  chdir: APP_DIR,
   pgroup: true,  # own process group so we can kill all children
   [:out, :err] => FALCON_LOG
 )

@@ -20,7 +20,7 @@ export default function Index() {
       <Head title="Home" />
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Hanami Base</CardTitle>
+          <CardTitle>Template</CardTitle>
           <CardDescription>Clone-and-go Hanami 3 application template.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">

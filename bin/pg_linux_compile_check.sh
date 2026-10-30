@@ -8,7 +8,7 @@ RUBY_IMAGE="ruby:4.0.5"
 PLATFORM="linux/amd64"
 
 echo "=== pg Linux/x86-64 source-compile check ==="
-echo "pg version (pinned in architect/Gemfile.lock): ${PG_VERSION}"
+echo "pg version (pinned in the app's Gemfile.lock): ${PG_VERSION}"
 echo "Docker image: ${RUBY_IMAGE} (--platform ${PLATFORM})"
 echo ""
 

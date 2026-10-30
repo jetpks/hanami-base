@@ -2,11 +2,9 @@
 
 require "hanami/db/repo"
 
-module Space
-  module Server
-    module DB
-      class Repo < Hanami::DB::Repo
-      end
+module Template
+  module DB
+    class Repo < Hanami::DB::Repo
     end
   end
 end

@@ -19,7 +19,7 @@ require "async/service/configuration"
 class FalconConfigurationTest < Minitest::Test
   FALCON_RB = File.expand_path("../../falcon.rb", __dir__)
   EXPECTED_SERVICE_NAMES = %w[
-    architect.web
+    template.web
   ].freeze
 
   def test_all_services_present_with_integer_counts

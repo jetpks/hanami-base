@@ -9,7 +9,7 @@ require "async/service/managed/environment"
 # Falcon::Environment::Rack includes Application which overrides endpoint to a Unix IPC socket
 # (designed for virtual-host reverse-proxy topology). We override endpoint to bind plain TCP HTTP
 # so both the web service and the boot-smoke probe work without a separate proxy layer.
-service "architect.web" do
+service "template.web" do
   include Falcon::Environment::Rack
 
   # FALCON_BIND: container deploys override (podman's PublishPort forwards to

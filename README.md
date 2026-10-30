@@ -15,12 +15,12 @@ and transport every project wants and no domain.
   primitives, layout/nav scaffold, and one example page (`Home/Index` at `/`)
   exercising the whole chain — inertia shared props, the vite pipeline, and a
   `components/ui` primitive.
-- SSE transport substrate: `Space::Server::StreamAction` (streaming body,
+- SSE transport substrate: `Template::StreamAction` (streaming body,
   heartbeat, Last-Event-ID resume, subscribe-then-backlog race discipline)
-  over redis streams (`Space::Server::SSE` + `SSE::Fanout` in
-  `lib/space/server/`), proven end-to-end by the public ticker example
+  over redis streams (`Template::SSE` + `SSE::Fanout` in
+  `lib/template/`), proven end-to-end by the public ticker example
   (`GET /ticker` live feed + `POST /ticker/publish`, `Ticker/Index` page).
-- Attachments: a Shrine uploader skeleton (`Space::Server::AttachmentUploader`)
+- Attachments: a Shrine uploader skeleton (`Template::AttachmentUploader`)
   with memory storages in test / file-system otherwise, the uploader JSON in a
   text column, and `uploaded_file` reconstitution from the struct.
 - Background jobs: async-job with the Inline processor in test / a redis
@@ -36,7 +36,7 @@ and transport every project wants and no domain.
 
 `config/settings.rb` exposes `oauth_providers` (default `["github"]`; accepts a
 comma-separated string for ENV overrides). `config/app.rb` maps each enabled
-name through the `Space::Server::OAUTH_PROVIDERS` table to its OmniAuth
+name through the `Template::OAUTH_PROVIDERS` table to its OmniAuth
 strategy registration (client credentials from settings) and derives the CSP
 `form-action` origins from the same list. A provider name missing from the map
 raises at boot. Adding a provider = strategy gem + one map entry + settings
@@ -53,14 +53,14 @@ rule; a `false` outcome redirects to `/` with an alert flash and no session.
 
 ## The SSE transport
 
-Actions that stream live events subclass `Space::Server::StreamAction`
+Actions that stream live events subclass `Template::StreamAction`
 (`app/stream_action.rb`) and call `render_stream(req, res, key:)` with a redis
 stream key. The response carries the three SSE headers, replays the stream's
 backlog (a reconnecting client's `Last-Event-ID` becomes the exclusive start
 bound), then live-tails the key with a 15s heartbeat comment until the client
 disconnects. Entries are redis stream `[entry_id, fields]` pairs framed as
 `id:`/`data:` lines; the numeric entry-id cursor deduplicates the race window
-between subscribing and reading the backlog (`lib/space/server/sse.rb`).
+between subscribing and reading the backlog (`lib/template/sse.rb`).
 
 The transport carries no auth machinery by design — gating is the subclass's
 job: override `handle`, do the check FIRST, and only then call `render_stream`
@@ -79,7 +79,7 @@ fails loudly instead of wiping dev.
 
 ## Attachments and background jobs
 
-Uploads go through `Space::Server::AttachmentUploader`
+Uploads go through `Template::AttachmentUploader`
 (`app/attachment_uploader.rb`): `AttachmentUploader.store(io)` uploads to the
 `store` storage and returns the JSON string a text column carries
 (`{id, storage, metadata}`); the struct's `#attachment` reconstitutes it into
@@ -111,9 +111,35 @@ attachment is gone.
 
 ## Mint a project
 
-Clone this repo and develop — it boots as-is. (A rename/mint pass for the
-`Space::Server` module, session key, and database names is planned tooling;
-until then those names are the template's own.)
+Clone this repo (or copy the tree) and develop — it boots as-is under the
+placeholder module, so the harness is usable before any renaming. To mint it
+as a real project:
+
+```sh
+ruby bin/bootstrap <NewName>          # one CamelCase word, e.g. AcmeCorp
+mise exec -- bundle exec hanami db prepare   # creates the renamed databases
+npm ci --no-fund --no-audit
+```
+
+`bin/bootstrap` renames the module and every identifier derived from it —
+the session cookie key, the credentials master-key env var, the database
+names (`.env`, `.env.test`, CI), the npm name, the falcon service, the
+display strings, and the `lib/` paths — then re-greps the whole tree for
+every one of them and removes itself: a minted project carries no template
+tooling, and the script's own pattern strings are the tokens it sweeps.
+Multiword names go kebab where the platform requires it (`AcmeCorp` → npm
+`acme-corp`, falcon `acme-corp.web`) and snake everywhere else
+(`acme_corp_test`, `ACME_CORP_MASTER_KEY`).
+
+Then two steps the script can't do: name the repo / set its remote, and read
+this README through — it still describes the substrate, not your project.
+`gems/**` are deliberately untouched; their namespaces are their own.
+
+Two carry-overs are name-only-faithful to the template and stay as-is: the
+provider-keyed `users.github_uid` column, and the github OAuth `read:org`
+scope in `config/app.rb`. Both predate the authorization seam — a project
+with its own authz rule may want to revisit them (see
+[the two seams](#the-two-seams-a-project-configures)).
 
 ## Setup
 

@@ -14,7 +14,7 @@ class DocumentsTest < Minitest::Test
 
   def setup
     setup_db
-    Space::Server::App["db.gateway"].connection[:documents].delete
+    Template::App["db.gateway"].connection[:documents].delete
     OmniAuth.config.test_mode = true
   end
 
@@ -32,7 +32,7 @@ class DocumentsTest < Minitest::Test
     post("/auth/github/callback")
   end
 
-  def documents_repo = Space::Server::Repos::DocumentsRepo.new
+  def documents_repo = Template::Repos::DocumentsRepo.new
 
   def test_upload_creates_row_and_processes_it_inline
     _, headers, = mock_callback
@@ -67,7 +67,7 @@ class DocumentsTest < Minitest::Test
 
     assert_equal 422, status
     assert_equal ["must be a file upload"], parse_json(body)["errors"]["file"]
-    assert_equal 0, Space::Server::App["db.gateway"].connection[:documents].count
+    assert_equal 0, Template::App["db.gateway"].connection[:documents].count
   end
 
   def test_anonymous_upload_redirects_without_creating_a_row
@@ -75,6 +75,6 @@ class DocumentsTest < Minitest::Test
 
     assert_equal 302, status
     assert_equal "/", headers["location"]
-    assert_equal 0, Space::Server::App["db.gateway"].connection[:documents].count
+    assert_equal 0, Template::App["db.gateway"].connection[:documents].count
   end
 end

@@ -16,16 +16,16 @@ class InertiaChassisBootTest < Minitest::Test
 end
 
 # G1-G7: initial-render HTML structure via the real configured layout.
-# Calls Space::Server::App.start(:inertia) to load the provider (idempotent; noops if already started).
+# Calls Template::App.start(:inertia) to load the provider (idempotent; noops if already started).
 class InertiaChassisLayoutTest < Minitest::Test
   def setup
     # config/providers/inertia.rb is loaded lazily; start it so InertiaHanami.configure runs.
-    Space::Server::App.start(:inertia)
+    Template::App.start(:inertia)
     super
   end
 
   def vite_instance
-    Space::Server::App["vite"]
+    Template::App["vite"]
   end
 
   # Render the configured layout with dev-mode vite: stub dev_server_running? → true
@@ -61,7 +61,7 @@ class InertiaChassisLayoutTest < Minitest::Test
   def test_title_has_data_inertia_attribute
     html = render_layout
     assert_includes html, "<title data-inertia>"
-    assert_includes html, "Hanami Base"
+    assert_includes html, "Template"
     refute_includes html, "content_for"
   end
 
@@ -120,12 +120,12 @@ class InertiaChassisLayoutTest < Minitest::Test
     assert_includes html, '<div id="app">'
   end
 
-  # §2.3: vite instance root must point to architect/config/vite.json
-  def test_vite_instance_is_architect_rooted
+  # §2.3: vite instance root must point at the app root's config/vite.json
+  def test_vite_instance_is_app_rooted
     vite = vite_instance
     root = vite.config.root
     assert root.join("config/vite.json").exist?,
-      "architect vite instance must find config/vite.json at #{root.join('config/vite.json')}"
+      "vite instance must find config/vite.json at #{root.join('config/vite.json')}"
   end
 
   # InertiaHanami config values installed by the provider

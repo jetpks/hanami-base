@@ -1,0 +1,121 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Mint a project from this template.
+#
+#   ruby bin/bootstrap <NewName>
+#
+# One-shot renamer, run in a fresh clone. It renames the placeholder module
+# `Template` and every identifier derived from it, re-greps the tree clean,
+# and deletes itself — minted projects carry no template tooling, and this
+# file's own pattern strings ARE the tokens being swept. stdlib only; no
+# bundler, no gems.
+#
+#   1. validate the one CamelCase argument; derive `snake` (databases + env
+#      key), `kebab` (npm name + falcon service — those must be url-safe),
+#      and `upper` (the master-key env var)
+#   2. rewrite every file under the cwd: blanket capital-T `Template` (always
+#      an identifier in this tree; English prose is lowercase `template`)
+#      plus the identifier-scoped lowercase patterns. Skipped: gems/**
+#      (frozen substrate with namespaces of their own), CHANGELOG.md
+#      (history), config/credentials.yml.enc (encrypted blob), and the
+#      tool/vcs/vendor dirs — but NOT .github, whose ci.yml carries the test
+#      database name
+#   3. move lib/template → lib/<snake> and test/lib/template →
+#      test/lib/<snake>; the SSE require_relative paths are depth-stable
+#      (both dirs stay one level under their root)
+#   4. re-grep the tree for every pattern and list any survivor, exiting
+#      non-zero. Exempt here: README.md (its mint section may name the
+#      placeholder), CHANGELOG.md, package-lock.json (its other `template`
+#      hits are @babel/template dependency names), the credentials blob, and
+#      this script
+#   5. print the minted identifiers + next steps, then remove this file
+#
+# Two name-only-faithful carry-overs every minted project should revisit (see
+# README's mint section): the provider-keyed users.github_uid column and the
+# github OAuth read:org scope.
+
+require "fileutils"
+
+abort "usage: ruby bin/bootstrap <NewName>   # e.g. AcmeCorp" unless ARGV.length == 1
+abort "run me from the template root (no config/app.rb here)" unless File.file?("config/app.rb")
+
+const = ARGV[0]
+abort "#{const}: need a CamelCase constant, e.g. AcmeCorp" unless const =~ /\A[A-Z][A-Za-z0-9]*\z/
+abort "#{const} is the placeholder this script replaces" if const == "Template"
+
+snake = const.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
+kebab = snake.tr("_", "-")
+upper = snake.upcase
+
+SUBSTS = [
+  ["Template",               const],                    # module + display strings + docs
+  ["_template_session",      "_#{snake}_session"],      # cookie key (config/app.rb)
+  ["TEMPLATE_MASTER_KEY",    "#{upper}_MASTER_KEY"],    # credentials env key (config/app.rb, bin/credentials)
+  ["template_development",   "#{snake}_development"],   # .env
+  ["template_test",          "#{snake}_test"],          # .env.test, ci.yml DATABASE_URL
+  ['"name": "template"',     "\"name\": \"#{kebab}\""], # package.json + the two lock name fields
+  ["template.web",           "#{kebab}.web"],           # falcon service + its test
+  ["lib/template",           "lib/#{snake}"]            # require paths + doc refs
+].freeze
+SKIP_DIRS  = %w[.git .bundle gems node_modules storage vendor].freeze
+SKIP_FILES = ["CHANGELOG.md", "config/credentials.yml.enc", "bin/bootstrap"].freeze
+EXTRA_CHECK_EXEMPT = ["README.md", "package-lock.json"].freeze
+
+# Walk every file below `dir`, skipping the named dirs and repo-relative files.
+def each_file(dir, skip_dirs, skip_files, &block)
+  Dir.each_child(dir).sort.each do |name|
+    path = File.join(dir, name)
+    if File.directory?(path)
+      next if skip_dirs.include?(name)
+      each_file(path, skip_dirs, skip_files, &block)
+    else
+      rel = path.sub(%r{\A\./}, "")
+      yield rel unless skip_files.include?(rel)
+    end
+  end
+end
+
+# Read as bytes + force UTF-8 so a stray binary asset (an icon, say) is skipped
+# rather than crashing the mint.
+def read_text(path)
+  s = File.read(path, mode: "rb").force_encoding(Encoding::UTF_8)
+  s.valid_encoding? ? s : nil
+end
+
+rewritten = 0
+each_file(".", SKIP_DIRS, SKIP_FILES) do |path|
+  text = read_text(path) or next
+  out = text
+  SUBSTS.each { |from, to| out = out.gsub(from, to) }
+  next if out == text
+  File.write(path, out)
+  rewritten += 1
+end
+
+FileUtils.mv("lib/template", "lib/#{snake}")
+FileUtils.mv("test/lib/template", "test/lib/#{snake}")
+
+leftovers = []
+each_file(".", SKIP_DIRS, SKIP_FILES + EXTRA_CHECK_EXEMPT) do |path|
+  text = read_text(path) or next
+  text.each_line.with_index do |line, i|
+    SUBSTS.each { |from, _| leftovers << "#{path}:#{i + 1}: #{line.strip}" if line.include?(from) }
+  end
+end
+unless leftovers.empty?
+  warn "PLACEHOLDER IDENTIFIERS REMAIN (bootstrap kept for a re-run):"
+  leftovers.each { |hit| warn "  #{hit}" }
+  exit 1
+end
+
+puts "minted #{const} — #{rewritten} files rewritten, lib/#{snake} + test/lib/#{snake} moved"
+SUBSTS.each { |from, to| puts "  #{from.ljust(20)}→ #{to}" }
+puts
+puts "next steps:"
+puts "  mise exec -- bundle exec hanami db prepare   # creates the #{snake}_* databases"
+puts "  npm ci --no-fund --no-audit                 # then npm test && npm run check"
+puts "  name the repo / set its remote              # a human step, not a script's"
+puts "  review README — it still describes the substrate"
+puts "  revisit the two carry-overs: users.github_uid, github read:org scope"
+FileUtils.rm(__FILE__)

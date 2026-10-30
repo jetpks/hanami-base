@@ -23,12 +23,10 @@ else
   }
 end
 
-module Space
-  module Server
-    # The attachments skeleton. Store returns the JSON string a text column
-    # carries; `uploaded_file` reconstitutes it (see Structs::Document#attachment).
-    class AttachmentUploader < Shrine
-      def self.store(io) = upload(io, :store).to_json
-    end
+module Template
+  # The attachments skeleton. Store returns the JSON string a text column
+  # carries; `uploaded_file` reconstitutes it (see Structs::Document#attachment).
+  class AttachmentUploader < Shrine
+    def self.store(io) = upload(io, :store).to_json
   end
 end

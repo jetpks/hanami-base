@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class SchemaTest < Minitest::Test
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def col(table, name)

@@ -6,7 +6,7 @@ require_relative "../test_helper"
 # per-table struct subclasses died with their tables).
 class StructsTest < Minitest::Test
   def conn
-    @conn ||= Space::Server::App["db.gateway"].connection
+    @conn ||= Template::App["db.gateway"].connection
   end
 
   def setup
@@ -15,7 +15,7 @@ class StructsTest < Minitest::Test
     conn[:users].delete
   end
 
-  def users_repo = Space::Server::Repos::UsersRepo.new
+  def users_repo = Template::Repos::UsersRepo.new
 
   def test_user_struct_class
     user  = Factory[:user]

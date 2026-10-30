@@ -27,7 +27,7 @@ function renderPage(shared: Partial<SharedProps> = {}) {
 describe('Home/Index', () => {
   it('shows the app name', () => {
     const { container } = renderPage()
-    expect(container.textContent).toContain('Hanami Base')
+    expect(container.textContent).toContain('Template')
   })
 
   it('shows the signed-in user name', () => {

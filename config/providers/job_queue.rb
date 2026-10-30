@@ -10,12 +10,12 @@ require "async/redis/endpoint"
 # the same Delegate, so the job body is identical either way.
 Hanami.app.register_provider(:job_queue) do
   start do
-    delegate = Space::Server::Jobs::ProcessDocument::Delegate.new
+    delegate = Template::Jobs::ProcessDocument::Delegate.new
 
     processor = if Hanami.env?(:test)
       Async::Job::Processor::Inline.new(delegate)
     else
-      Space::Server::Jobs::ProcessDocument.build_redis_processor
+      Template::Jobs::ProcessDocument.build_redis_processor
     end
 
     register("job_queue", processor)

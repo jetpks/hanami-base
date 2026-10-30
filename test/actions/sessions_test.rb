@@ -33,7 +33,7 @@ class SessionsActionTest < Minitest::Test
     assert_equal 302, status
     assert_equal "/", headers["location"]
 
-    users_repo = Space::Server::App["repos.users_repo"]
+    users_repo = Template::App["repos.users_repo"]
     user = users_repo.by_github_uid("9")
     refute_nil user
     assert_equal "orgy",             user.username
@@ -113,12 +113,12 @@ class SessionsActionTest < Minitest::Test
     set_cookie = headers["set-cookie"]
     refute_nil set_cookie, "Login must issue a session cookie"
     entry = set_cookie.split("\n").find do |cookie|
-      cookie.start_with?("_space_server_session=") && cookie.include?("expires=")
+      cookie.start_with?("_template_session=") && cookie.include?("expires=")
     end
     refute_nil entry, "Sign-in Set-Cookie must carry an expires= attribute: #{set_cookie.inspect}"
 
     expires = Time.httpdate(entry[/expires=([^;]+)/i, 1])
-    assert_in_delta Time.now + Space::Server::SESSION_EXPIRE_AFTER, expires, 300
+    assert_in_delta Time.now + Template::SESSION_EXPIRE_AFTER, expires, 300
   end
 
   # Post-logout session authenticates as nobody: capture the renewed logout
@@ -138,13 +138,13 @@ class SessionsActionTest < Minitest::Test
     assert_nil parse_json(body)["props"]["current_user"]
   end
 
-  # G5 — no dev_auth_user bypass in architect app/ sources
+  # G5 — no dev_auth_user bypass in app/ sources
   def test_no_dev_auth_user_bypass
-    architect_app_dir = File.expand_path("../../app", __dir__)
-    hits = Dir.glob("#{architect_app_dir}/**/*.rb").select do |f|
+    app_dir = File.expand_path("../../app", __dir__)
+    hits = Dir.glob("#{app_dir}/**/*.rb").select do |f|
       File.read(f).include?("dev_auth_user")
     end
-    assert_empty hits, "dev_auth_user must not appear in architect app/ sources: #{hits}"
+    assert_empty hits, "dev_auth_user must not appear in app/ sources: #{hits}"
   end
 
   # G5 — current_user is nil with no session (tested via action without crashing)
