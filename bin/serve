@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Production launcher — execs the supervised web topology in one host process.
+# Machine auth is per-user sat_ tokens only: the legacy shared global-token
+# fallback was removed, so nothing in the environment feeds ingest auth anymore.
+# (The former op://-ref resolution helper died with the I06 cut.)
+#
+# Usage: bin/serve
+
+Dir.chdir(File.expand_path("..", __dir__))
+
+exec("bundle", "exec", "falcon", "host", "falcon.rb")
