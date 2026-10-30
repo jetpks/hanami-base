@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# all-fax-no-printer — the space-server: web + import/executor/consumer
-# workers in one supervised falcon topology (bin/serve → falcon.rb).
+# hanami-base — the base Hanami application template: the web app in one
+# supervised falcon topology (bin/serve → falcon.rb).
 #
 # No secrets are baked in: everything arrives at runtime via environment
 # (DATABASE_URL, REDIS_URL, SESSION_SECRET, ...). Production
@@ -51,7 +51,6 @@ COPY app app/
 COPY config config/
 COPY lib lib/
 COPY bin bin/
-COPY images images/
 COPY --from=frontend /app/public/vite public/vite
 RUN mkdir -p log tmp && chown -R app:app /app
 USER app

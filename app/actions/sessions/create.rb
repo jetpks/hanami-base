@@ -4,12 +4,12 @@ module Space
   module Server
     module Actions
       module Sessions
-        # OmniAuth GitHub callback. OmniAuth's request-phase (POST /auth/github)
-        # already guards CSRF via AuthenticityTokenProtection (key :csrf). This
-        # action must be OUT of Hanami Action CSRF because the callback POST
-        # carries OmniAuth's own token, not Hanami's _csrf_token.
+        # OmniAuth provider callback. OmniAuth's request-phase (POST /auth/:provider)
+        # already guards CSRF via the shared `_csrf_token` validation phase wired in
+        # config/app.rb. This action must be OUT of Hanami Action CSRF because the
+        # callback POST carries OmniAuth's own token, not Hanami's _csrf_token.
         class Create < Space::Server::Action
-          include Space::Server::Deps["operations.authenticate_user"]
+          include Space::Server::Deps["operations.authenticate_user", "operations.authorize_user"]
 
           def handle(req, res)
             auth = req.env["omniauth.auth"]
@@ -20,6 +20,15 @@ module Space
             end
 
             user = authenticate_user.call(auth)
+
+            # Authorization seam: the default (AuthorizeUser) allows any
+            # authenticated identity; a project overrides that operation to plug
+            # its own rule. A denial must NOT create a session.
+            unless authorize_user.call(user, auth)
+              res.flash["alert"] = "Not authorized."
+              res.redirect_to "/"
+              return
+            end
 
             # Session fixation guard: :renew tells Rack::Session to delete the old
             # session and generate a new ID before committing.

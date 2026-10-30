@@ -3,17 +3,16 @@
 
 ENV["HANAMI_ENV"] ||= "test"
 
-# In-process boot + route-resolve smoke (G2/G6).
+# In-process boot + route-resolve smoke.
 # Usage: bundle exec ruby bin/http_smoke.rb
 # Exit 0 = PASS; exit 1 = FAIL (error printed to stderr)
 #
-# Auth-required routes now return 401 (not 5xx) for anonymous callers.
 # The important invariant: no route returns 5xx.
 
 require "hanami/boot"
 require "rack/mock"
 
-INERTIA_GET_PATHS = %w[/ /spaces /conversations /conversations/1].freeze
+INERTIA_GET_PATHS = %w[/].freeze
 
 def smoke_call(verb, path)
   env = Rack::MockRequest.env_for(path, "REQUEST_METHOD" => verb)
@@ -26,7 +25,7 @@ end
 
 failures = []
 
-# Routes that must NOT 5xx (correct authz status for anon is fine)
+# Routes that must NOT 5xx
 ANON_ROUTES = [
   ["GET",    "/up"],
   ["GET",    "/auth/github/callback"],
@@ -35,18 +34,6 @@ ANON_ROUTES = [
   ["GET",    "/logout"],
   ["DELETE", "/logout"],
   ["GET",    "/"],
-  ["GET",    "/conversations"],
-  # Spaces (private — owner-only; anon/stranger → redirect, never 5xx)
-  ["GET",    "/spaces/1"],
-  ["GET",    "/spaces/1/artifacts/1"],
-  # Auth-required routes — anon → 401, not 5xx
-  ["GET",    "/conversations/1"],
-  ["GET",    "/conversations/1/stream"],
-  ["POST",   "/conversations/ingest"],
-  ["PATCH",  "/conversations/1/publish"],
-  ["DELETE", "/conversations/1"],
-  ["PATCH",  "/messages/1/publish"],
-  ["GET",    "/api_tokens"],
 ].freeze
 
 ANON_ROUTES.each do |verb, path|
@@ -60,7 +47,7 @@ ANON_ROUTES.each do |verb, path|
   end
 end
 
-# GET / must return 200 (published-only list; empty DB → [])
+# GET / must return 200 (the example page)
 root_status, root_headers, root_body = smoke_call("GET", "/")
 unless root_status == 200
   failures << "GET / → expected 200, got #{root_status}"
@@ -70,26 +57,6 @@ end
 up_status, _, _ = smoke_call("GET", "/up")
 unless up_status == 200
   failures << "GET /up → expected 200, got #{up_status}"
-end
-
-# Auth-required write endpoints must return 401 for anon (not 5xx, not 200)
-AUTH_REQUIRED = [
-  ["PATCH",  "/conversations/1/publish"],
-  ["DELETE", "/conversations/1"],
-  ["PATCH",  "/messages/1/publish"],
-].freeze
-
-AUTH_REQUIRED.each do |verb, path|
-  begin
-    status, _, _ = smoke_call(verb, path)
-    # 4c-3 inverted guards return 3xx redirects for anon. The security invariant
-    # is: no unauthorized 200 and no 5xx. Accept any 3xx-4xx.
-    if status == 200 || status >= 500
-      failures << "#{verb} #{path} → expected non-200/non-5xx for anon, got #{status}"
-    end
-  rescue => e
-    failures << "#{verb} #{path} → #{e.class}: #{e.message}"
-  end
 end
 
 if failures.empty?

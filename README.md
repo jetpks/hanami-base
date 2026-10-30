@@ -1,63 +1,50 @@
-# all-fax-no-printer
+# hanami-base
 
-A Ruby/Hanami application for exploring and sharing AI agent sessions. Watch a
-captured session land live over SSE, browse the persisted transcript with rich
-markdown and code rendering, and publish conversations read-only.
+The base Hanami application template: a clone-and-go substrate for new
+projects. Every new project is minted from this repo — it carries the harness
+and transport every project wants and no domain.
 
-## Lineage
+## What's in the box
 
-This repo began as a fork of `jetpks/chat_share`, lived on as the `server/`
-subtree of the `jetpks/space-architect` monorepo, and was extracted into this
-standalone repository with `git filter-repo --subdirectory-filter server` —
-git history is preserved. Pre-extraction (monorepo) history and changelog live
-in [jetpks/space-architect](https://github.com/jetpks/space-architect).
-The application itself is still `space-server` internally (`Space::Server`
-modules, `bin/serve`, `space_server_*` database names) — only the repository
-changed.
+- Hanami 3.0.x + falcon (supervised topology via `bin/serve` → `falcon.rb`),
+  ROM-SQL/postgres, the dry-rb suite (types, validation, monads, operations),
+  cookie sessions.
+- OmniAuth OAuth with GitHub as the compiled-in example strategy (see the
+  provider seam below).
+- Full frontend kit: Vite + React + Inertia + Tailwind 4 + shadcn/radix
+  primitives, layout/nav scaffold, and one example page (`Home/Index` at `/`)
+  exercising the whole chain — inertia shared props, the vite pipeline, and a
+  `components/ui` primitive.
+- Five in-tree gems under `gems/` (frozen substrate): hanami-credentials,
+  hanami-force-ssl, hanami-healthcheck, inertia-hanami, vite-hanami.
+- mise ruby pin, healthcheck (`GET /up`), force-ssl, encrypted credentials.
 
-## Feature areas
+## The two seams a project configures
 
-The UI leads with spaces: `/` and `/spaces` are the spaces index,
-`/conversations` lists captured sessions across spaces.
+### OAuth providers (settings-driven)
 
-- **Spaces** — architect-loop space directories (iterations, artifacts,
-  decisions) browsable at `/spaces/:id`; the show page is the phone observation
-  deck: a bounded-height live log of the whole space on top, the last narrator
-  message beneath it, newest-first conversations with full-row tap targets, and
-  iterations in their own section below. Conversations not filed into a space
-  are grouped by working directory under the index's "Unspaced" section.
-- **Conversations** — every captured agent session lands as a conversation
-  (index at `/conversations`, show at `/conversations/:id`, publish toggle,
-  delete). A capture still landing mounts a LiveLog on its show page — a
-  looplog-style event log of the streaming capture — while its status is
-  `pending` or `live`. The landed body reads as flat prompt/reply pairs per
-  turn: prose as markdown, tool exchanges folded to one-line rows, thinking
-  collapsed, with the turn sidebar as the jump nav. The parser is the pi harness stream
-  (`lib/space/server/normalizer/pi.rb`); a body that parses but yields no
-  recognizable events fails the conversation visibly instead of leaving it
-  `live` forever (pi's first-line classification doesn't claim fails the
-  conversation — there is no fallback parser).
-- **Live streaming (SSE)** — `GET /conversations/:id/stream` replays the
-  Redis backlog honoring the client's `Last-Event-ID` header, then fans out
-  live with a 15s heartbeat. Event vocabulary: `session_init` (the capture is
-  live), `message_start`, `block_open`, `text_delta`, `tool_args_delta`,
-  `block_close`, `message_complete`, `tool_result`, and the terminal
-  `conversation_complete` (the client closes the stream on it). The space
-  observation deck lives at `GET /spaces/:id/stream`: it muxes the space's
-  conversations' streams into one long-lived feed whose events carry
-  conversation identity (`conversation_id`/`agent_role`/`agent_name`/`tag`),
-  supports `Last-Event-ID` replay, pings a 15s heartbeat, and never ends on
-  `conversation_complete` (an ordinary event there — the stream closes only on
-  client disconnect). Both streams accept `?tail=N`: on a fresh connect (no
-  `Last-Event-ID`) the backlog replay is windowed to the last N messages
-  (message-boundary windows — a message's deltas and results stay with it);
-  a `Last-Event-ID` reconnect replays everything after its cursor, tail
-  ignored. Older history pages upward: `GET /conversations/:id/stream/history`
-  and `GET /spaces/:id/stream/history` take `before=<id>` (the oldest held
-  event's SSE id — envelope form for spaces) and `limit=N` (default 100), and
-  return `{"events": [{"id": …, "data": …}, …], "more": bool}` — the same
-  events the stream would emit, chronological, whole-message windowed, with
-  `more` telling the client whether another page remains below.
+`config/settings.rb` exposes `oauth_providers` (default `["github"]`; accepts a
+comma-separated string for ENV overrides). `config/app.rb` maps each enabled
+name through the `Space::Server::OAUTH_PROVIDERS` table to its OmniAuth
+strategy registration (client credentials from settings) and derives the CSP
+`form-action` origins from the same list. A provider name missing from the map
+raises at boot. Adding a provider = strategy gem + one map entry + settings
+flip.
+
+### Sign-in authorization
+
+`app/operations/authorize_user.rb` is the policy seam consulted by
+`sessions.create` between authentication and session creation. The default
+allows any authenticated identity — the template must round-trip auth out of
+the box. A project overrides `#call(user, auth_hash)` (the OmniAuth auth hash
+carries the provider's own claims: orgs, teams, email domain) to plug its own
+rule; a `false` outcome redirects to `/` with an alert flash and no session.
+
+## Mint a project
+
+Clone this repo and develop — it boots as-is. (A rename/mint pass for the
+`Space::Server` module, session key, and database names is planned tooling;
+until then those names are the template's own.)
 
 ## Setup
 
@@ -69,7 +56,7 @@ npm install
 Credentials are managed via Hanami's encrypted credentials store:
 
 ```sh
-bin/credentials edit   # opens $EDITOR; set github_oauth_id/secret and db url
+bin/credentials edit   # opens $EDITOR; set github_client_id/secret and db url
 ```
 
 ## Run
@@ -81,75 +68,18 @@ bin/dev   # starts web server (:3000) and Vite (:3036)
 ## Test
 
 ```sh
-bundle exec rake test  # Ruby suite
+bundle exec rake test  # Ruby suite (needs local postgres; mise exec -- wraps ruby)
 npm test               # Vitest (TypeScript/component tests)
 npm run check          # TypeScript type check
 ```
 
-## Ingest mouth
+CI (.github/workflows/ci.yml) runs the same three plus a per-gem suite matrix
+for the five in-tree gems and a non-blocking bundler-audit.
 
-`POST /conversations/ingest` accepts a `pi --mode json` JSONL body and lands
-it as a conversation. The first line of a session's first POST must be the
-`{"type":"session",...}` record; it may reappear in later chunks —
-re-processing it is a metadata no-op.
+## Provenance
 
-Machine pushes authenticate with `Authorization: Bearer <token>` where
-`<token>` is a per-user `sat_` token (see below). No bearer → `401`.
-
-### Optional headers (applied idempotently per POST)
-
-| Header                     | Effect                                                                                             |
-|----------------------------|----------------------------------------------------------------------------------------------------|
-| `X-Space-Slug`             | Find-or-create the authenticated user's space and file the conversation under it; absent → the conversation is grouped by working directory instead |
-| `X-Parent-Session-Id`      | Marks the conversation as a subagent transcript of the session with that id                          |
-| `X-Agent-Role`             | Role tag (architect/builder/judge/narrator/coordinator/…); absent = interactive                       |
-| `X-Agent-Name`             | Agent display name                                                                                   |
-| `X-Session-Complete: true` | Terminal: the conversation's status becomes `completed` and a terminal `conversation_complete` SSE event is emitted; absent → status `live` |
-
-### Idempotency
-
-The pi session record's `id` is the conversation key — find-or-create by
-`(user_id, session_id)`. Each applied pi record's `id` is tracked on the
-conversation, and an already-applied record is skipped entirely: no message
-write and no Redis event, so whole-file re-sends, chunk retries, and
-reconnect replays land zero duplicates.
-
-The response is `202` JSON `{id, session_id, status, events}` (plus `error`
-when the body parses but yields no recognizable events — a visible failure,
-never silent live-forever).
-
-### Per-user API tokens (primary)
-
-Each user mints named tokens at **Api Tokens** (`/api_tokens` — session
-sign-in required; bearer is for the data API, not this page). Minting takes
-only a name: the server generates the secret (`sat_` + 64 hex chars, from
-`SecureRandom.hex(32)`), shows it **exactly once** in the mint response, and
-persists only its SHA-256 hex digest in `api_tokens.token_hash` (unique
-index). The plaintext is never stored and cannot be recovered — the mint view
-shows it exactly once, with a copy-to-clipboard affordance, so store it then.
-Revocation is soft (`revoked_at` stamp), so mint history stays auditable.
-
-Requests carrying `Authorization: Bearer <token>` authenticate **as the
-token's owner** on the bearer endpoint (`POST /conversations/ingest`);
-ownership and visibility then flow per-user with no further configuration.
-Lookup is a unique-index hit on the presented token's SHA-256 digest — never
-a linear scan or plaintext comparison. Every use touches `last_used_at` on
-the token row. Failed bearer attempts warn-log request path and outcome only
-— never token material.
-
-## Deploy
-
-Production serves from `studio.slush.systems` via the `deploy/ansible` role —
-see [docs/how-to/deploy-on-the-studio.md](docs/how-to/deploy-on-the-studio.md).
-
-## Retention & Cleanup (v1: manual)
-
-**Redis conversation streams.** The `conversation:<id>` display stream
-self-evicts: every `XADD` refreshes the key's TTL to `StreamKey::TTL_SECONDS`
-(1800s / 30 minutes), so a stream with no further writes simply expires. No
-operator action needed.
-
-**Postgres growth.** `conversations` and `messages` rows are never deleted by
-the app — there is no rake task, cron, or GC job. If a table needs pruning,
-that's a manual `DELETE` an operator issues directly; no tooling ships for it
-in v1.
+Distilled from
+[all-fax-no-printer](https://github.com/jetpks/all-fax-no-printer) @ `3b42334`
+(seed commit `34eba87`, fresh git history) — itself the `server/` subtree of
+the space-architect monorepo, descended from a fork of `jetpks/chat_share`.
+See [CHANGELOG.md](CHANGELOG.md).

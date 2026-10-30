@@ -2,10 +2,8 @@
 
 require_relative "../test_helper"
 
-# G1: Relations load, schema inferred, JSONB typed.
+# Relations load with schema inferred from the distilled users table.
 class RelationsTest < Minitest::Test
-  TABLES = %i[users conversations messages].freeze
-
   def rom
     @rom ||= Space::Server::App["db.rom"]
   end
@@ -15,52 +13,17 @@ class RelationsTest < Minitest::Test
   end
 
   def setup
-    [:messages, :conversations, :users].each do |t|
-      conn[t].delete
-    end
+    conn[:users].delete
   end
-
-  # --- G1: all 5 relations registered and queryable -------------------------
 
   def test_users_relation_queryable
     assert_kind_of Array, rom.relations[:users].to_a
   end
 
-  def test_conversations_relation_queryable
-    assert_kind_of Array, rom.relations[:conversations].to_a
-  end
-
-  def test_messages_relation_queryable
-    assert_kind_of Array, rom.relations[:messages].to_a
-  end
-
-  # --- schema spot-checks ---------------------------------------------------
-
-  def test_conversations_schema_includes_status_published_user_id
-    attrs = rom.relations[:conversations].schema.map(&:name)
-    assert_includes attrs, :status
-    assert_includes attrs, :published
-    assert_includes attrs, :user_id
-  end
-
-  def test_messages_schema_includes_content_position_conversation_id
-    attrs = rom.relations[:messages].schema.map(&:name)
-    assert_includes attrs, :content
-    assert_includes attrs, :position
-    assert_includes attrs, :conversation_id
-  end
-
-  # --- G1: JSONB predicate queries execute without error --------------------
-
-  def test_users_github_orgs_jsonb_contain_executes
-    assert_kind_of Array, rom.relations[:users].where { github_orgs.contain([]) }.to_a
-  end
-
-  def test_users_github_orgs_jsonb_has_key_executes
-    assert_kind_of Array, rom.relations[:users].where { github_orgs.has_key("id") }.to_a
-  end
-
-  def test_messages_content_jsonb_contain_executes
-    assert_kind_of Array, rom.relations[:messages].where { content.contain([]) }.to_a
+  def test_users_schema_includes_auth_columns
+    attrs = rom.relations[:users].schema.map(&:name)
+    assert_includes attrs, :github_uid
+    assert_includes attrs, :username
+    assert_includes attrs, :avatar_url
   end
 end
