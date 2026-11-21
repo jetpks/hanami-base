@@ -18,6 +18,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   URI-template ReDoS); pinned bumps: shrine 3.10.2, sequel 5.110.0,
   dry-types 1.9.2, dry-monads 1.11.1.
 
+### Fixed
+
+- CI ruby-tests: the "Install PostgreSQL 17 client" step fetched three
+  exact-version debs from the PGDG pool, two of which 404'd once PGDG rotated
+  point releases (client-common 291 → 297, libpq5 18.4 → 18.7) — main went
+  red on 2026-11-21. Replaced with the PGDG apt repo +
+  `apt-get install postgresql-client-17`, which resolves live dependency
+  versions and follows the runner distro; drops the now-unneeded
+  pgdg-debs actions/cache step.
+
 ### Added
 
 - Attachments + background-jobs substrate: the Shrine uploader skeleton
