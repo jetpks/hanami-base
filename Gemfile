@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-ruby "4.0.5"
+ruby "4.0.10"
 
 # In-tree gems
 gem "hanami-credentials", path: "gems/hanami-credentials"
@@ -32,18 +32,18 @@ gem "async-job", "0.11.1"
 gem "async-job-processor-redis", "0.3.1"
 
 # File attachments
-gem "shrine", "3.7.1"
+gem "shrine", "3.10.2"
 
 # Persistence
 gem "rom", "5.4.3"
 gem "rom-sql", "3.7.0"
-gem "sequel", "5.109.0"
+gem "sequel", "5.110.0"
 gem "pg", "1.7.0"
 
 # dry-rb suite
-gem "dry-types", "1.9.1"
+gem "dry-types", "1.9.2"
 gem "dry-validation", "1.11.1"
-gem "dry-monads", "1.11.0"
+gem "dry-monads", "1.11.1"
 gem "dry-operation", ">= 1.0.1"
 
 # CLI + build

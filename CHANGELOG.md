@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- Ruby pin 4.0.5 → 4.0.10 across every prescribing surface (Gemfile,
+  .ruby-version, mise.toml, Containerfile, the five vendored-gem
+  Gemfiles) — picks up the interpreter security releases through 4.0.10.
+- Gem refresh clearing all 12 bundler-audit advisories: omniauth 2.1.4 →
+  2.4.2 (CVE-2026-63183 host header injection), rack 3.2.7 → 3.2.9
+  (GHSA-5v64-555j-wjxm multipart memory-exhaustion DoS + three further
+  rack advisories), addressable 2.9.0 → 2.9.2 (seven advisories, incl.
+  URI-template ReDoS); pinned bumps: shrine 3.10.2, sequel 5.110.0,
+  dry-types 1.9.2, dry-monads 1.11.1.
+
 ### Added
 
 - Attachments + background-jobs substrate: the Shrine uploader skeleton
