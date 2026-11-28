@@ -14,7 +14,8 @@ import { csrfToken } from '@/lib/csrf'
 type Tick = { id: string; n: number }
 
 // The SSE transport's example page, no props needed: a native EventSource
-// tails GET /ticker (public feed), and the publish button POSTs via a plain
+// tails GET /ticker/stream (public feed — the page itself lives at GET
+// /ticker), and the publish button POSTs via a plain
 // fetch — NOT inertia's router: an Inertia POST re-renders the page component,
 // which would tear down the EventSource on every publish. The fetch carries
 // X-XSRF-TOKEN (the inertia middleware bridges it onto Hanami's CSRF check).
@@ -25,7 +26,7 @@ export default function Index() {
   const [status, setStatus] = useState('connecting')
 
   useEffect(() => {
-    const source = new EventSource('/ticker')
+    const source = new EventSource('/ticker/stream')
     // EventSource auto-reconnects on transport errors; onopen flips the line
     // back to live after a reconnect.
     source.onopen = () => setStatus('live')

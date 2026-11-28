@@ -19,7 +19,7 @@ and transport every project wants and no domain.
   heartbeat, Last-Event-ID resume, subscribe-then-backlog race discipline)
   over redis streams (`Template::SSE` + `SSE::Fanout` in
   `lib/template/`), proven end-to-end by the public ticker example
-  (`GET /ticker` live feed + `POST /ticker/publish`, `Ticker/Index` page).
+  (`GET /ticker/stream` live feed + `POST /ticker/publish`, `Ticker/Index` page at `GET /ticker`).
 - Attachments: a Shrine uploader skeleton (`Template::AttachmentUploader`)
   with memory storages in test / file-system otherwise, the uploader JSON in a
   text column, and `uploaded_file` reconstitution from the struct.
@@ -67,7 +67,7 @@ job: override `handle`, do the check FIRST, and only then call `render_stream`
 (halting before it keeps the error response ordinary JSON; once the SSE headers
 are set, an error can only surface as a broken stream).
 
-The ticker example is the whole chain in miniature: `GET /ticker` (the
+The ticker example is the whole chain in miniature: `GET /ticker/stream` (the
 `Ticker/Index` page's `EventSource`) tails the `sse:ticker` stream, and
 `POST /ticker/publish` (the page's fetch POST carrying `X-XSRF-TOKEN`) INCRs a
 counter and XADDs one capped entry.
