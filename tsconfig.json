@@ -1,5 +1,12 @@
 {
   "files": [],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./app/frontend/*"],
+      "~/*": ["./app/frontend/*"]
+    }
+  },
   "references": [
     {
       "path": "./tsconfig.app.json"
