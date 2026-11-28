@@ -29,7 +29,7 @@ class TickerStreamTest < Minitest::Test
   # --- headers (public endpoint by design) --------------------------------------------
 
   def test_ticker_anon_returns_sse_headers
-    status, headers, = get_stream("/ticker")
+    status, headers, = get_stream("/ticker/stream")
     assert_equal 200, status
     assert_equal "text/event-stream", headers["content-type"]
     assert_equal "no-cache", headers["cache-control"]
@@ -46,7 +46,7 @@ class TickerStreamTest < Minitest::Test
       _     = redis_client.xadd(STREAM_KEY, "*", "type", "tick", "data", %({"type":"tick","n":2}))
       _     = redis_client.xadd(STREAM_KEY, "*", "type", "tick", "data", %({"type":"tick","n":3}))
 
-      _, _, body = get_stream("/ticker")
+      _, _, body = get_stream("/ticker/stream")
       chunks = collect_sse_chunks(body, timeout: 5)
 
       text = chunks.join
@@ -64,7 +64,7 @@ class TickerStreamTest < Minitest::Test
       redis_client = Async::Redis::Client.new(redis_endpoint)
       redis_client.del(STREAM_KEY)
 
-      _, _, body = get_stream("/ticker")
+      _, _, body = get_stream("/ticker/stream")
       chunks = []
       mock_stream = MockStream.new(chunks)
 
@@ -100,7 +100,7 @@ class TickerStreamTest < Minitest::Test
       second = redis_client.xadd(STREAM_KEY, "*", "type", "tick", "data", %({"type":"tick","n":2}))
       redis_client.xadd(STREAM_KEY, "*", "type", "tick", "data", %({"type":"tick","n":3}))
 
-      _, _, body = get_stream("/ticker", extra_env: {"HTTP_LAST_EVENT_ID" => second})
+      _, _, body = get_stream("/ticker/stream", extra_env: {"HTTP_LAST_EVENT_ID" => second})
       chunks = collect_sse_chunks(body, timeout: 5)
 
       assert_equal [3], sse_ns(chunks), "reconnect replays exactly the post-cursor entries"
@@ -127,7 +127,7 @@ class TickerStreamTest < Minitest::Test
         # timeout must fire the heartbeat comment between events.
         redis_client.xadd(STREAM_KEY, "*", "type", "tick", "data", %({"type":"tick","n":0}))
 
-        _, _, body = get_stream("/ticker")
+        _, _, body = get_stream("/ticker/stream")
         chunks = []
         mock_stream = MockStream.new(chunks)
 

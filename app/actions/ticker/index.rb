@@ -3,15 +3,14 @@
 module Template
   module Actions
     module Ticker
-      # The SSE transport's neutral example: a public live feed off redis
-      # stream "sse:ticker". Public by design — a minted project's first
-      # demo must not require auth credentials; gating is the subclass's
-      # job (see StreamAction).
-      class Index < Template::StreamAction
-        STREAM_KEY = "sse:ticker"
-
+      # The SSE demo's page (the browser-facing half; the stream itself is
+      # Stream — EventSource tails GET /ticker/stream). Split from the
+      # transport so the Inertia page is actually routable: a single action
+      # cannot be both the SSE body and the page, and for the page there is
+      # nothing to gate — the feed is public by design.
+      class Index < Template::Action
         def handle(req, res)
-          render_stream(req, res, key: STREAM_KEY)
+          render_inertia(req, res, "Ticker/Index", props: {})
         end
       end
     end

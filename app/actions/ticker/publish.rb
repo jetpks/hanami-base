@@ -17,7 +17,7 @@ module Template
 
         def handle(req, res)
           n = redis.incr(COUNTER_KEY)
-          redis.xadd(Index::STREAM_KEY, "MAXLEN", "~", MAX_ENTRIES, "*",
+          redis.xadd(Stream::STREAM_KEY, "MAXLEN", "~", MAX_ENTRIES, "*",
             "type", "tick", "data", JSON.generate(type: "tick", n: n))
           render_json(res, {ok: true, n: n})
         end

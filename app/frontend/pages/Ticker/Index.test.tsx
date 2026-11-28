@@ -49,7 +49,7 @@ describe('Ticker/Index', () => {
   it('subscribes to /ticker and goes live on open', () => {
     render(<Index />)
     const source = FakeEventSource.instances[0]
-    expect(source.url).toBe('/ticker')
+    expect(source.url).toBe('/ticker/stream')
     expect(screen.getByText('connecting')).toBeTruthy()
 
     act(() => source.onopen?.())

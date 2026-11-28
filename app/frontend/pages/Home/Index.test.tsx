@@ -9,6 +9,7 @@ const props: SharedProps = { current_user: null, flash: {} }
 
 vi.mock('@inertiajs/react', () => ({
   Head: (_props: { title?: string }) => null,
+  Link: (_props: { href?: string; children?: ReactNode }) => null,
   usePage: () => ({ props }),
 }))
 
@@ -40,9 +41,7 @@ describe('Home/Index', () => {
     expect(container.textContent).toContain('Sign in')
   })
 
-  it('shows flash notices and alerts', () => {
-    const { container } = renderPage({ flash: { notice: 'Signed in.', alert: 'Watch out.' } })
-    expect(container.textContent).toContain('Signed in.')
-    expect(container.textContent).toContain('Watch out.')
-  })
+  // Flash no longer asserts through this page: it surfaces as a toast from
+  // AppLayout (sonner), which this suite mocks away.
+
 })

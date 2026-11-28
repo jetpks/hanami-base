@@ -15,6 +15,7 @@ module Template
 
     # The SSE transport's neutral example: a public live feed + its publisher
     get  "/ticker",          to: "ticker.index"
+    get  "/ticker/stream",   to: "ticker.stream"
     post "/ticker/publish", to: "ticker.publish"
 
     # The attachments example: upload → persist → enqueue for processing
